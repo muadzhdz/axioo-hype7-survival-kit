@@ -1,0 +1,15 @@
+# /etc/default/limine configuration template for Axioo Hype 7 AMD (X7-2)
+# Preserves cryptdevice/root mount and appends verified stability parameters.
+
+ESP_PATH="/boot"
+
+# Stable kernel commandline flags:
+# - nvme_core.default_ps_max_latency_us=0 : Disables NVMe APST low-power state to avoid controller crash.
+# - pcie_aspm=off                        : Disables PCIe Active State Power Management to avoid SSD dropping off the bus.
+# - mem_sleep_default=s2idle             : Uses AMD Zen 3 native Modern Standby (S0ix) instead of broken S3.
+# - initramfs_async=0                    : Fixes race condition on Kernel 7.1+ with Plymouth LUKS unlock.
+# - quiet splash                         : Enables graphical boot splash.
+
+KERNEL_CMDLINE[default]+="nvme_core.default_ps_max_latency_us=0 pcie_aspm=off mem_sleep_default=s2idle initramfs_async=0 quiet splash"
+
+BOOT_ORDER="linux-omarchy, linux-omarchy-*, *, *fallback, Snapshots"

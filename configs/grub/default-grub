@@ -1,0 +1,11 @@
+# /etc/default/grub configuration template for Axioo Hype 7 AMD (X7-2)
+# Append the following parameters to GRUB_CMDLINE_LINUX_DEFAULT:
+#
+# nvme_core.default_ps_max_latency_us=0 pcie_aspm=off mem_sleep_default=s2idle
+#
+# Example:
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="Arch"
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet nvme_core.default_ps_max_latency_us=0 pcie_aspm=off mem_sleep_default=s2idle"
+GRUB_CMDLINE_LINUX=""
