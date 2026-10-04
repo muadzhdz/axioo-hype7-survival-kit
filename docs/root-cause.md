@@ -25,17 +25,18 @@ The AMD Ryzen 7 5825U is an octa-core Zen 3 (Barcelo/Cezanne refresh) APU utiliz
 
 ---
 
-## 2. ACPI Modern Standby (S0ix) vs. Legacy S3 (`deep`)
+## 2. ACPI Modern Standby (S0ix / s2idle) vs. True S3 (`deep`)
 
-### The Symptom:
-Closing the laptop lid or entering suspend causes an immediate reboot. On reboot, the laptop boots directly into UEFI BIOS Setup instead of the operating system.
+### The Dilemma:
+* Under `s2idle` (Modern Standby), the Embedded Controller (EC) keeps power rails active because the SoC remains in an S0 idle state. On the Axioo Hype 7, this causes the **cooling fan to continue spinning** and the **keyboard backlight to remain illuminated** during sleep. This leads to battery drain and dangerous thermal buildup when carried in a backpack.
+* Under `deep` (ACPI S3), the chipset pulls the hardware `SLP_S3#` line low, which physically cuts power to the fan motor, keyboard backlight LEDs, and display panel, keeping only RAM in self-refresh mode.
 
-### The Mechanism:
-Modern laptop manufacturers (including Axioo and its underlying OEM barebone designs) design their ACPI DSDT tables strictly for Windows 11 Modern Standby (S0ix / PEP - Power Engine Plugin).
+### Why Did S3 Sleep Fail Previously?
+Earlier reports incorrectly attributed S3 sleep failures to broken ACPI DSDT tables or EC firmware limitations. In reality, **S3 sleep failure was entirely caused by the BALLISTA NVMe controller dropping off the PCIe bus (see Section 3 below)**.
 
-1. **The Conflict of `mem_sleep_default=deep`:**  
-   Forcing legacy S3 sleep (`mem_sleep_default=deep`) on a modern firmware designed for S0ix produces inconsistent power rail sequencing. The Embedded Controller (EC) expects the OS to enter Low Power S0 Idle (`s2idle`).
-2. When the kernel attempts to transition power domains into S3, the EC watchdog timer detects an invalid power state transition and forces an emergency hardware reboot.
+When waking from S3 without PCIe ASPM workarounds, the NVMe SSD failed to re-enumerate before the kernel attempted disk I/O, resulting in an immediate kernel panic, system reset, and boot-to-BIOS loop.
+
+Once PCIe ASPM and APST are stabilized (`pcie_aspm=off` and `nvme_core.default_ps_max_latency_us=0`), **ACPI S3 (`mem_sleep_default=deep`) functions with 100% stability**, providing true hardware sleep where fans and LEDs shut down completely.
 
 ---
 
@@ -69,5 +70,5 @@ By enforcing three targeted kernel parameters, all failure modes are eliminated:
 | :--- | :--- | :--- |
 | **`nvme_core.default_ps_max_latency_us=0`** | Disables NVMe APST deep sleep | Prevents Ballista controller freeze |
 | **`pcie_aspm=off`** | Disables PCIe Active State Power Management | Prevents SSD drop-off from PCIe bus |
-| **`mem_sleep_default=s2idle`** | Forces native AMD Modern Standby | Fixes ACPI suspend crash on Axioo EC |
+| **`mem_sleep_default=deep`** | Enforces ACPI S3 deep sleep | Powers down fan, keyboard backlight, and panel |
 | **Purge `idle=nomwait` & `processor.max_cstate`** | Restores autonomous CPPC `amd-pstate-epp` | Fixes random spontaneous reboots |

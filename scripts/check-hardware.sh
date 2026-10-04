@@ -34,10 +34,10 @@ echo -e "\n${BOLD}3. ACPI Sleep Mode:${RESET}"
 if [[ -f /sys/power/mem_sleep ]]; then
   MEM_SLEEP=$(cat /sys/power/mem_sleep)
   echo -e "   Available modes: $MEM_SLEEP"
-  if [[ "$MEM_SLEEP" =~ \[s2idle\] ]]; then
-    echo -e "   Status         : ${GREEN}OK (Modern Standby s2idle is active)${RESET}"
-  elif [[ "$MEM_SLEEP" =~ \[deep\] ]]; then
-    echo -e "   Status         : ${RED}WARNING (Forced S3 deep sleep is active - known to cause resume/BIOS crash)${RESET}"
+  if [[ "$MEM_SLEEP" =~ \[deep\] ]]; then
+    echo -e "   Status         : ${GREEN}OK (True S3 deep sleep active - fan, keyboard backlight, and panel fully power down)${RESET}"
+  elif [[ "$MEM_SLEEP" =~ \[s2idle\] ]]; then
+    echo -e "   Status         : ${YELLOW}NOTICE (Modern Standby s2idle active - fan and keyboard backlight may remain powered)${RESET}"
   fi
 else
   echo -e "   ${YELLOW}/sys/power/mem_sleep not supported or unavailable.${RESET}"
@@ -56,10 +56,6 @@ if [[ "$CMDLINE" =~ idle=nomwait ]]; then
 fi
 if [[ "$CMDLINE" =~ processor\.max_cstate ]]; then
   echo -e "   [${RED}FAIL${RESET}] Found 'processor.max_cstate' - invalid C-state restriction for AMD Zen 3, induces core instability!"
-  DANGEROUS=1
-fi
-if [[ "$CMDLINE" =~ mem_sleep_default=deep ]]; then
-  echo -e "   [${RED}FAIL${RESET}] Found 'mem_sleep_default=deep' - triggers NVMe PCIe power rail drop and reboot to BIOS loop!"
   DANGEROUS=1
 fi
 
@@ -81,10 +77,10 @@ else
   echo -e "   [${YELLOW}MISSING${RESET}] pcie_aspm=off (recommended to prevent NVMe dropping off PCIe bus)."
 fi
 
-if [[ "$CMDLINE" =~ mem_sleep_default=s2idle ]]; then
-  echo -e "   [${GREEN}OK${RESET}] mem_sleep_default=s2idle is active (native AMD Modern Standby)."
+if [[ "$CMDLINE" =~ mem_sleep_default=deep ]]; then
+  echo -e "   [${GREEN}OK${RESET}] mem_sleep_default=deep is active (True S3 sleep with fan/backlight power cut)."
 else
-  echo -e "   [${YELLOW}MISSING${RESET}] mem_sleep_default=s2idle (recommended for Axioo AMD UEFI compatibility)."
+  echo -e "   [${YELLOW}MISSING${RESET}] mem_sleep_default=deep (recommended to power down fan and keyboard backlight in sleep)."
 fi
 
 echo -e "\n${BOLD}${CYAN}Diagnostic complete.${RESET}"
